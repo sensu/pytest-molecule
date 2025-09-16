@@ -11,9 +11,14 @@ from pathlib import Path
 from shlex import quote
 from typing import TYPE_CHECKING, Optional
 
-import pkg_resources
 import pytest
 import yaml
+
+try:
+    from importlib.metadata import version
+except ImportError:
+    # Python < 3.8 compatibility
+    from importlib_metadata import version
 
 from molecule.api import drivers
 from molecule.config import ansible_version
@@ -75,9 +80,11 @@ def pytest_configure(config):
     # Add extra information that may be key for debugging failures
     if hasattr(config, "_metadata"):
         for package in ["molecule"]:
-            config._metadata["Packages"][package] = pkg_resources.get_distribution(
-                package
-            ).version
+            try:
+                config._metadata["Packages"][package] = version(package)
+            except Exception:
+                # Fallback if package version cannot be determined
+                config._metadata["Packages"][package] = "unknown"
 
         if "Tools" not in config._metadata:
             config._metadata["Tools"] = {}
